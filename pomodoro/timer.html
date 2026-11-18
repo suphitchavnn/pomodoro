@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>circle timer</title>
+</head>
+
+
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #cec9ba;
+    font-family:Arial, Helvetica, sans-serif;
+    color:#232323;
+  }
+  .timer {
+    background: white;
+    width: 370px;
+    max-width: 94%;
+    padding: 30px 22px;
+    border-radius: 26px;
+    text-align: center;
+  }
+  h1 { margin-top: 0; font-size: 25px; }
+  button {
+    border: none;
+    border-radius: 12px;
+    padding: 13px 16px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: bold;
+  }
+  .modes, .actions {
+    display: flex;
+    gap: 10px;
+  }
+  .modes button {
+    flex: 1;
+    background: #9FBC9F;
+  }
+  .modes button.active, #start {
+    background: #9FBC9F;
+    color: white;}
+
+  .circle {
+    width: 100%;
+    max-width: 300px;
+    aspect-ratio: 1;
+    position: relative;
+    margin: 24px auto;
+  }
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+  .track {
+    fill: none;
+    stroke: #8a8a8a;
+    stroke-width: 12;
+  }
+  .progress {
+    fill: none;
+    stroke: tomato;
+    stroke-width: 12;
+    stroke-linecap: round;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+    transition: stroke-dashoffset .3s;
+  }
+  .center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  #phase {
+    font-size: 18px;
+    color: #232323;
+  }
+  #clock {
+    font-size: clamp(48px, 12vw, 68px);
+    font-weight: bold;
+    margin: 12px 0;
+    font-variant-numeric: tabular-nums;
+  }
+  #status, #rounds {
+    color: #BF0D0D
+;
+    font-size: 14px;
+  }
+  .actions button { flex: 1; }
+  #reset { background: #e7f1ed; }
+  body.break-time { background: #cec9ba; }
+  body.break-time .progress { stroke: #85AB85; }
+  body.break-time #start { background: #85AB85; }
+
+
+
+</style>
+</head>
+<body>
+<div class="timer">
+  <h1>⏱ Focus Timer</h1>
+  <div class="modes">
+    <button id="m25" class="active"
+      onclick="setMode(25,5)">25 / 5 minutes </button>
+    <button id="m50"
+      onclick="setMode(50,10)">50 / 10 minutes </button>
+  </div>
+  <div class="circle">
+    <svg viewBox="0 0 300 300">
+      <circle class="track"
+        cx="150" cy="150" r="125"/>
+      <circle id="ring" class="progress"
+        cx="150" cy="150" r="125"/>
+    </svg>
+    <div class="center">
+      <div id="phase">Focus time</div>
+      <div id="clock">25:00</div>
+      <div id="status">Starting</div>
+    </div>
+  </div>
+  <p id="rounds">finished 0 times</p>
+  <div class="actions">
+    <button id="start" onclick="toggleTimer()">
+      ▶ STARTING
+    </button>
+    <button id="reset" onclick="resetTimer()">
+      ↺ RESET
+    </button>
+  </div>
+</div>
+<script>
+let work = 1;
+let rest = 1;
+let isBreak = false;
+let remaining = work * 60;
+let rounds = 0;
+let running = false;
+let deadline = 0;
+let interval = null;
+let audio = null;
+const $ = id => document.getElementById(id);
+const circumference = 2 * Math.PI * 125;
+$("ring").style.strokeDasharray = circumference;
+function duration() {
+  return (isBreak ? rest : work) * 60;
+}
+function render() {
+  let m = Math.floor(remaining / 60);
+  let s = remaining % 60;
+  $("clock").textContent =
+    String(m).padStart(2, "0") + ":" +
+    String(s).padStart(2, "0");
+  $("phase").textContent =
+    isBreak ? "Break Time" : "Focus-Time";
+  $("rounds").textContent =
+    "finish " + rounds + " Times ";
+  $("ring").style.strokeDashoffset =
+    circumference * (1 - remaining / duration());
+  $("start").textContent = running
+    ? "⏸ stop"
+    : "▶ start / continue";
+  $("m25").classList.toggle("active", work === 25);
+  $("m50").classList.toggle("active", work === 50);
+  document.body.classList.toggle(
+    "break-time", isBreak
+  );
+}
+function beep() {
+  if (!audio) return;
+  if (audio.state === "suspended") {
+    audio.resume().catch(() => {});
+  }
+  const osc = audio.createOscillator();
+  const gain = audio.createGain();
+  osc.connect(gain);
+  gain.connect(audio.destination);
+  osc.frequency.value = isBreak ? 750 : 900;
+  gain.gain.value = 0.12;
+  osc.start();
+  osc.stop(audio.currentTime + 0.35);
+}
+function nextPhase() {
+  if (!isBreak) {
+    rounds++;
+    isBreak = true;
+    $("status").textContent = "Break Time";
+  } else {
+    isBreak = false;
+    $("status").textContent = "Back to focus";
+  }
+  beep();
+  remaining = duration();
+  render();
+}
+function tick() {
+  if (!running) return;
+  const now = Date.now();
+  let steps = 0;
+  while (now >= deadline && steps < 10000) {
+    nextPhase();
+    deadline += duration() * 1000;
+    steps++;
+  }
+  remaining = Math.max(
+    0, Math.ceil((deadline - now) / 1000)
+  );
+  render();
+}
+function toggleTimer() {
+  if (running) {
+    tick();
+    running = false;
+    clearInterval(interval);
+    interval = null;
+    $("status").textContent = "STOP";
+  } else {
+    if (!audio) {
+      const AudioCtx =
+        window.AudioContext ||
+        window.webkitAudioContext;
+      if (AudioCtx) audio = new AudioCtx();
+    }
+    if (audio) {
+      audio.resume().catch(() => {});
+    }
+    running = true;
+    deadline = Date.now() + remaining * 1000;
+    interval = setInterval(tick, 250);
+    $("status").textContent = "Timing...";
+  }
+  render();
+}
+function resetTimer() {
+  running = false;
+  clearInterval(interval);
+  interval = null;
+  isBreak = false;
+  rounds = 0;
+  remaining = work * 60;
+  $("status").textContent = "Starting";
+  render();
+}
+function setMode(w, r) {
+  work = w;
+  rest = r;
+  resetTimer();
+}
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && running) tick();
+});
+render();
+</script>
+</body>
+</html>
+
+
+<body>
+          <button id="index-page" onclick="location.href='index.html'">Menu</button>
+</body>
+
+</html>

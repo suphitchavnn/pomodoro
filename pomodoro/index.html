@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <link rel="stylesheet" herf="style.css">
+<script src="script.js"></script>
+
+</head>
+
+<style>
+
+    body {
+  margin: 0;
+  min-height: 100vh;
+
+  background-image: url("Background.GIF");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.menu {
+  position: absolute;
+  top: 39.5%;
+  left: 50%;
+  transform: translateX(-50%);
+
+  width: min(39%, 600px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(25px, 9.5vh, 100px);
+  align-items: center;
+}
+
+.menu-btn {
+  display: block;
+  width: 100%;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.menu-btn img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.menu-btn:hover {
+  transform: scale(1.03);
+}
+
+</style>
+
+</html>
+<body>
+   
+    <div class="menu">
+  <a href="timer.html" class="menu-btn">
+    <img src="timer_btn.PNG">
+  </a>
+
+  <a href="collection.html" class="menu-btn">
+    <img src="collection_btn.PNG">
+  </a>
+</div>
+    
+</body>
+</html>
+
+
+
